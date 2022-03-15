@@ -1,0 +1,430 @@
+https://www.geeksforgeeks.org/built-functions-awk/
+https://www.geeksforgeeks.org/built-functions-awk/
+https://www.geekpills.com/automation/awk/awk-if-statement-examples
+for Accurate physical constant values: https://physics.nist.gov/cgi-bin/cuu/Value?c 
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+#space groups link : http://img.chem.ucl.ac.uk/sgp/large/sgp.htm
+
+$ qsub Zif8_300k1e5.pbs  #to submit the job in metacentrum.
+$ qdel 9655575           #to kill or delete the job from metacentrum.
+$ qstat -u rayar         # to check the status of the job.
+$ qstat -xu rayar        # to check the job data status afert finished.
+$ cat zif8.out | awk 'NF==18' > zif8out18.csv   #to create a .csv file with required field
+*****************to extend the wall time************* 
+(BUSTER)melounova@skirit:~$ qextend 8152779.meta-pbs.metacentrum.cz 01:00:00
+The walltime of the job 8152779.meta-pbs.metacentrum.cz has been extended.
+Additional walltime:	01:00:00
+New walltime:		02:00:00
+==========================================================================================
+$awk 'FNR == 2 {print}' file_name  to print selected row
+$awk 'FNR == 2 {print $2}' file_name to print select row and selected column
+$awk 'NR == 1 {print $2 + $3 + $4}' MgM_V-F_Hz.out #to add the values in the 2,3,4th columns of 1st row 
+$ cat data_hkust1_pr4_ntf2_r1.lmp |awk '$2==1&&NF==6{print $0}'|less
+$ cat data_hkust1_pr4_ntf2_r1.lmp |awk '$2==1&&NF==6{print $0}'|head -1  
+$cat data_hkust1_pr4_ntf2_r1.lmp |awk '$2==25&&NF==6{print $0}'|head -1
+136 25 35974 35972 35968 35969   #Result of the above command
+$cat data_hkust1_pr4_ntf2_r1.lmp |awk '$1==35974&&NF==10{print $0}'|head -1
+35974 411 22 -5.3000000000000003e-01 1.6702766267934283e+01 4.8376833094136309e+00 5.9111550324601637e+01 0 0 0 
+#Above result to get the row that we interested.
+
+
+to find the average:
+(BUSTER)rayar@skirit:~/Zif8/300k1e5$ 
+cat zif8.out | grep -v [a-z] | awk 'BEGIN{e_tot=0;n=0} NF==18{e_tot+=$3;n++} END{E_tot=e_tot/n; print "ave_tot_energy",E_tot,"Kcal/box"}'
+
+To find the SD:
+stdev = sqrt((1/N)*(sum of (value - mean)^2))   # if we know the mean
+ 
+stdev = sqrt((1/N)*((sum of squares) - (((sum)^2)/N))) # if we don't know the mean 
+
+awk '{for(i=1;i<=NF;i++) {sum[i] += $i; sumsq[i] += ($i)^2}} 
+          END {for (i=1;i<=NF;i++) {
+          printf "%f %f \n", sum[i]/NR, sqrt((sumsq[i]-sum[i]^2/NR)/NR)}
+         }' file.dat >> aver-std.dat
+                          
+cat zif8.out | grep -v [a-z] | awk 'BEGIN{ } NF==18{} END{}'
+
+Mean and SD calculation:
+$ awk 'BEGIN{s=0;}{s=s+$1;}END{print s/NR;}' file
+awk ‘{delta = $1 – avg; avg += delta / NR; mean2 += delta * ($1 – avg); } END { print sqrt(mean2 / (NR-1)); }’ file
+##########################################################################################
+
+###########*******************CLASSIC SYSTEMS **************#######
+#Classical mechanics
+>> equilibrations         1st part of instructions
+>> projection trajectries  2nd part of instructions
+	energy, temp, Density and pressure plots.
+
+1) Unit cell preparation and .gjf and .xyz files 
+2) create supercell  .gjf and .xyg    #target ca 75 A length in each direction.
+3) run fftools we need .ff and MOF_fftools.pbs file 
+4) check witht he dihedrals atoms list 
+5) edit .lmp file 
+6) run for CM jobs. # .pbs file.
+after CM jobs are done. it must check time-step vs tot_E, volume to see 
+if there is any drift. if the plot is good we can proceed further steps.
+7)  1st part of instructions equilibrations
+in the first part before 3rd step it needs to edit copy manually the in.lmp file 
+for 300k1e5 and then follow the 3rd step.
+8)  2nd part of instructions  Projection trajectories.
+%%%%%%%%%%%=======PERIODIC REPLICA FROM .tsv FILE and CREATE .gjf , .xyz FILES======%%%%%%%%%%%%
+mercury software: to see the atoms that fit only within the box.
+In Calculate > Packing > Atoms that fit
+
+#to obtain the data for periodic replica
+(BUSTER)rayar@skirit:~/MgMOF74$ 
+cat MgMOF74-Atoms.tsv | awk 'NR>1{i=$1; A[i]=$2; x[i]=$5; y[i]=$6; z[i]=$7} END{for(j=1;j<=i;j++){for(k=j+1; k<=i; k++)
+{dx=x[j]-x[k];dy=y[j]-y[k];dz=z[j]-z[k];if(dx==0||dx==1||dx==-1){if(dy==0||dy==1||dy==-1)
+{if(dz==0||dz==1||dz==-1){print k, A[k], x[k],y[k],z[k], j }}}}}}' > MgMOF74.out                                #it is a continous comd line. 
+
+# to count the replica to delete the repeated atoms.
+(BUSTER)rayar@skirit:~/MgMOF74$ 
+cat MgMOF74-Atoms.tsv | awk 'NR>1{i=$1; A[i]=$2; x[i]=$5; y[i]=$6; z[i]=$7} END{for(j=1;j<=i;j++){for(k=j+1; k<=i; k++)
+{dx=x[j]-x[k];dy=y[j]-y[k];dz=z[j]-z[k];if(dx==0||dx==1||dx==-1){if(dy==0||dy==1||dy==-1)
+{if(dz==0||dz==1||dz==-1){print k, A[k], x[k],y[k],z[k], j }}}}}}' | wc -l                                     #it is a continous comd line. 
+
+  **********these are for creating XYZ and gjf files from .tsv file.****************
+$head HKUST1a_Atoms_prepared.tsv
+$cat HKUST1a_Atoms_prepared.tsv |awk 'NR>1{print $2, $9, $10, $11}'> HKUST1.xyz
+$cat HKUST1a_Atoms_prepared.tsv |awk 'NR>1{if($4=="Cu"){print $4, $9, $10, $11} else if($4!="Cu"){print substr($4,0,1), $9, $10, $11}}'> HKUST1.gjf
+
+# to align the decimials in xyz or .gjf file need to modify, this decimals are important for .gjf file.
+
+cat AlMIL53_scell_2.txt |awk '{if($1=="Al"){print $1, $2, $3, $4} else if($1!="Al"){printf "%s %1.8f %1.8f %1.8f \n",substr($1,0,1), $2, $3, $4}}'> AlMIL_supercell.gjf
+
+
+$cat MgMOF74-Copy.xyz | awk '{printf "%s %1.8f %1.8f %1.8f \n",$1,$2,$3,$4}'
+
+=============================================================================================
+
+Create Super_Cell then prepare again all the .xyz, simbox.xyz, gjf files as before 
+then follow with the counting the all terms. 
+count bonds of a certain type
+  566  cat data.lmp | awk 'NF==6&&$2==1{n++} END{print n}'
+count angles of a certain type
+  568  cat data.lmp | awk 'NF==7&&$2==1{n++} END{print n}'
+count dihedrals of a certain type
+  569  cat data.lmp | awk 'NF==8&&$2==1{n++} END{print n}'
+count the atom type
+  579  cat data.lmp | awk 'NF==10&&$3==1{n++} END{print n}'
+find the atom type
+  579  cat data.lmp | awk 'NF==10&&$1==442{print $0}'
+store the atom type
+cat data.lmp | awk 'NF==10{type[$1]=$3} END{for(x=1;x<=672;x++){print type[x]}}'
+bond types
+cat data.lmp | awk 'NF==6&&$2==1{n++} END{print n}'
+=====================================END========================================================
+
+
+[[=========================="to run fftool.py=================================================
+ 164  module avail python
+  165  module add python36-modules-gcc
+  166  cp HKUST1.xyz simbox.xyz
+  168  python fftool.py 1 HKUST1.xyz -b 26.3034 -p -l
+  169  python fftool.py 1 HKUST1.xyz -b 26.3034 -p xyz -l
+
+after creating .xyz file we can proceed with to run the fftool
+(BUSTER)rayar@skirit:~/MgMOF74$ ls
+MgMOF74-Atoms_UniqueAtoms.tsv  MgMOF74.ff  MgMOF74.gjf  MgMOF74.xyz  # now we have .xyz file in the directory
+(BUSTER)rayar@skirit:~/MgMOF74$ cp MgMOF74.xyz simbox.xyz            #copy file.xyz to simbox.xyz
+(BUSTER)rayar@skirit:~/MgMOF74$ ls
+MgMOF74-Atoms_UniqueAtoms.tsv  MgMOF74.ff  MgMOF74.gjf  MgMOF74.xyz  simbox.xyz  #now we have simbox.xyz file in the directory
+(BUSTER)rayar@skirit:~/MgMOF74$ module avail python      #to select or find the required python module.
+--------------------------------------------------------------------------- /packages/run/mod
+python-2.6.6-gcc         python26-modules-intel   python-2.7.6-gcc         python27-modules-g
+python-2.6.6-intel       python-2.7.10-gcc        python-2.7.6-intel       python27-modules-i
+python26-modules-gcc     python-2.7.10-intel      python27-modules-gcc     python27-modules-i           
+..
+...
+
+# out of all these above we need to select python36-modules-gcc  latest and appear in the last.
+
+(BUSTER)rayar@skirit:~/MgMOF74$ module load python36-modules-gcc  #load the module
+(BUSTER)rayar@skirit:~/MgMOF74$ python ../fftool.py 1 MgMOF74.xyz -p xyz -b 26.136 26.136 6.942 90 90 120 -l
+#in the above command ../fftool.py this means it select the file location path automatic.
+#we have to select the abc and alpha beta gamma values from the structure data from .cif file
+############### follow the instructions of fftools from this link periodic boundary conditions part.###########
+############### https://github.com/paduagroup/fftool/blob/master/README.md "]]
+
+#if the running fftool is failed and showed the memory error then creat the .pbs file and submit through pbs file.
+#launch the fftool command from the pbs file, in that way you can reserve more memory.
+#take any pbs you have and inside the file: declare hardware requirements as usual, 
+#then load the python module, go inside the directory with the .xyz file, and finally call the fftool.
+
+(BUSTER)rayar@skirit:~/HKUST1_Unsaturated$ cat HKUST1.xyz | grep -v OMO > HKUST1_Unsat.xyz  #to remove OMO from the .xyz file.
+(BUSTER)rayar@skirit:~/HKUST1_Unsaturated$ less HKUST1_Unsat.xyz | wc -l                    # to see the total number of lines. 
+16850
+(BUSTER)rayar@skirit:~/HKUST1_Unsaturated$ module avail python                              # to run the python and fftool.py
+(BUSTER)rayar@skirit:~/HKUST1_Unsaturated$ module load python36-modules-gcc
+(BUSTER)rayar@skirit:~/HKUST1_Unsaturated$ python fftool.py 1 HKUST1.xyz -b 78.9102 -p xyz -l # running fftool.py to create data.lmp file
+
+                     
+                   ******.pbs file script to launch fftool*******
+#!/bin/bash
+#PBS -S /bin/bash
+#PBS -M cervinkc@vscht.cz
+#PBS -m a
+#PBS -l select=1:ncpus=1:mpiprocs=1:ompthreads=1:mem=32gb:scratch_local=100gb
+#PBS -l walltime=24:00:00
+module add python36-modules-gcc
+export cesta=/storage/brno2/home/rayar/
+export uloha=ZnMOF5
+cd ${cesta}/${uloha}
+python ${cesta}/fftool.py 1 ZnMOF5.xyz -p xyz -b 25.894 -l
+
+                     **************END file*************************
+
+=============================================================================================
+****************ERROR IN CLASSIC SYSTEMS **********
+ERROR: Bond coeffs are not set (../bond.cpp:75)
+
+In this error we need to add the missing data in data_HKUST1_r1.2000000.lmp file from the main data.lmp file
+they are 
+
+Bond Codfficients 
+angle ..
+bondangle ..   etc..
+              *****************************************************
+ERROR on proc 3: Dihedral atoms 5203 5207 5300 5301 missing on proc 3 at step 29431 (../ntopo_dihedral_all.cpp:65)
+we can find this error in .out file.
+
+in this casd we need to check the in.lmp file and correct say in line 38 activate the command.
+
+# neigh_modify delay 0 every 1 check yes  #commented out.
+
+neigh_modify delay 0 every 1 check yes  #activated  now.
+**************************************************************************************
+%%%%%%%%%%%%%%%%%%%%%%%%%% END CLASSIC SYSTEMS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+##############################  QUANTUM SYSTEM  ############################################################
+starting QM simulations:
+1) need 2 files for initial run: .d12 and .pbs create these from other pbs fies and edit with the required data.
+use 2 Basis sets: pob-DZVP-rev2 from SI.
+2) primary run .pbs and .d12 files
+3) create folders 0.98 t0 1.80 for E-V values and run .pbs
+4) create frequency folders 
+
+for subbmitting multiple jobs: 
+go to folder followed by echo snd define li with required seq of the files and then create for loop for exicutiong the job.  
+(BUSTER)rayar@skirit:~/qm/MgMOF74$ echo $li
+(BUSTER)rayar@skirit:~/qm/MgMOF74$ li=`seq 0.950 0.010 1.080`
+(BUSTER)rayar@skirit:~/qm/MgMOF74$ for i in $li; do qsub MgMOF74${i}/MgMOF74${i}.pbs; done
+###to create the folders with 0.94, 0.93, 0.92 ..etc we can create the duplicate the -
+-folder and rename it has both .pbs and .d12 files, now change the .pbs file with new name 
+-in it. In .d12 file copy the lattie paremeter value located in the line 5 liek  the following:
+if we want to create 0.940 folder which we copied/duplicated from 0.950  
+25.1441668950000015/0.950 = result 
+result * 0.940 = new result 
+replace the new result with the previous value. ####
+Actually accedientlally I submitted the job without changing these lattice parameters.
+but surprisingly they auto changed in .d12 file. 
+##########################################################################################
+
+#commands to activate the vev_crystal.sh file
+(BUSTER)rayar@skirit:~/qm$ chmod +x vev_crystal.sh
+(BUSTER)rayar@skirit:~/qm$ cd MgMOF74
+(BUSTER)rayar@skirit:~/qm/MgMOF74$ /storage/brno2/home/rayar/qm/vev_crystal.sh MgMOF74
+(BUSTER)rayar@skirit:~/qm/MgMOF74$ /storage/brno2/home/rayar/qm/vev_crystal.sh MgMOF74 vev  
+(BUSTER)rayar@skirit:~/qm/MgMOF74$ /storage/brno2/home/rayar/qm/vev_crystal.sh MgMOF74 fre
+
+##################To extract the selected data here OPT END .. from the file##################
+
+(BUSTER)rayar@skirit:~/qm/MgMOF74$ li=`ls -1 | grep MgMOF74[0-1]`      #Preparing a list with variable li
+(BUSTER)rayar@skirit:~/qm/MgMOF74$ echo $li                            #calling all the list with the file name MgMOF74.
+MgMOF740.950 MgMOF740.950.pbs.e8846572 MgMOF740.950.pbs.e9022247 MgMOF740.950.pbs.e9026159 MgMOF740.950.pbs.e9055902 MgMOF740.950.pbs.o8846572 
+MgMOF740.950.pbs.o9022247 MgMOF740.950.pbs.o9026159 MgMOF740.950.pbs.o9055902 MgMOF740.960 MgMOF740.960.pbs.e8846573 MgMOF740.960.pbs.e9022248 
+MgMOF740.960.pbs.e9026160 MgMOF740.960.pbs.e9055903 MgMOF740.960.pbs.o8846573 MgMOF740.960.pbs.o9022248 MgMOF740.960.pbs.o9026160 MgMOF740.960.pbs.o9055903  so on..
+
+
+(BUSTER)rayar@skirit:~/qm/MgMOF74$ li=`ls -1 | grep MgMOF74[0-1] | grep -v pbs`   #filtering the directories (folders) out of all the above files
+(BUSTER)rayar@skirit:~/qm/MgMOF74$ echo $li                                        #re calling the list of folders
+MgMOF740.950 MgMOF740.960 MgMOF740.970 MgMOF740.980 MgMOF740.990 MgMOF741.000 MgMOF741.010 MgMOF741.020 
+MgMOF741.030 MgMOF741.040 MgMOF741.050 MgMOF741.060 MgMOF741.070 MgMOF741.080
+
+(BUSTER)rayar@skirit:~/qm/MgMOF74$ for i in $li ; do cat $i/$i.out | grep "OPT END - CONVERGED"; done  # to get the required OPT data. 
+ * OPT END - CONVERGED * E(AU):  -3.468764662375E+03  POINTS   40 *
+ * OPT END - CONVERGED * E(AU):  -3.468772252517E+03  POINTS   42 *
+ * OPT END - CONVERGED * E(AU):  -3.468778050034E+03  POINTS   36 *
+ * OPT END - CONVERGED * E(AU):  -3.468782957972E+03  POINTS   36 *
+ * OPT END - CONVERGED * E(AU):  -3.468786830425E+03  POINTS   31 *
+ * OPT END - CONVERGED * E(AU):  -3.468788473100E+03  POINTS    8 *
+ * OPT END - CONVERGED * E(AU):  -3.468787223446E+03  POINTS   31 *
+
+(BUSTER)rayar@skirit:~/qm/MgMOF74$ for i in $li ; do echo -n $i; cat $i/$i.out | grep "OPT END - CONVERGED"; done  #call with the folder name.
+MgMOF740.950 * OPT END - CONVERGED * E(AU):  -3.468764662375E+03  POINTS   40 *
+MgMOF740.960 * OPT END - CONVERGED * E(AU):  -3.468772252517E+03  POINTS   42 *
+MgMOF740.970 * OPT END - CONVERGED * E(AU):  -3.468778050034E+03  POINTS   36 *
+MgMOF740.980 * OPT END - CONVERGED * E(AU):  -3.468782957972E+03  POINTS   36 *
+MgMOF740.990 * OPT END - CONVERGED * E(AU):  -3.468786830425E+03  POINTS   31 *
+
+        %%%%%%%%%%%%%%========ERROR NON-CONVERGED =======%%%%%%%%%
+#In case of non conveged data the result will looks like  this
+
+ZIF80.920 * OPT END - CONVERGED * E(AU): -1.384726281473E+04 POINTS 30 *
+ZIF80.930 * OPT END - CONVERGED * E(AU): -1.384729828638E+04 POINTS 27 *
+ZIF80.940 * OPT END - CONVERGED * E(AU): -1.384732845534E+04 POINTS 28 *
+ZIF80.950 * OPT END - CONVERGED * E(AU): -1.384735320141E+04 POINTS 28 *
+ZIF80.960 * OPT END - CONVERGED * E(AU): -1.384737497305E+04 POINTS 25 *
+ZIF80.970 * OPT END - CONVERGED * E(AU): -1.384739353956E+04 POINTS 36 *
+ZIF80.980ZIF80.990ZIF81.000ZIF81.010 * OPT END - CONVERGED * E(AU): -1.384741791950E+04 POINTS 78 *   #this part has an error
+ZIF81.020ZIF81.030 * OPT END - CONVERGED * E(AU): -1.384739992386E+04 POINTS 21 *                     #that means that the 0.980, 0.990, 1.000, 1.020 ... 
+ZIF81.040 * OPT END - CONVERGED * E(AU): -1.384738315227E+04 POINTS 25 *                               geometries are not converged. 
+ZIF81.050 * OPT END - CONVERGED * E(AU): -1.384736195117E+04 POINTS 23 *
+ZIF81.060 * OPT END - CONVERGED * E(AU): -1.384733580569E+04 POINTS 24 *
+ZIF81.070 * OPT END - CONVERGED * E(AU): -1.384730496032E+04 POINTS 25 *
+ZIF81.080 * OPT END - CONVERGED * E(AU): -1.384727026809E+04 POINTS 23 *
+
+# in this case we need to edit those pirticular files 
+#Add this in all those .d12 files, exactly just above FULLOPTG and below OPTGEOM (for geometry convergence)
+MAXCYCLE
+1000
+and keep the ENDOPT (for electron convergence) line:
+MAXCYCLE
+100
+TOLDEG convergence parameter, which has to be lower (for freq values error)
+
+            %%%%%%%%%-------------END error editing------%%%%%%%%%%%
+
+similar commands for cell volume data
+
+(BUSTER)rayar@skirit:~/qm/MgMOF74$ for i in $li ; do echo -n $i; cat $i/$i.out | grep "CRYSTALLOGRAPHIC CELL (VOLUME"; done
+MgMOF740.950 CRYSTALLOGRAPHIC CELL (VOLUME=       3356.88163990)
+ CRYSTALLOGRAPHIC CELL (VOLUME=       3356.87332273)
+ CRYSTALLOGRAPHIC CELL (VOLUME=       3356.87329143)
+ CRYSTALLOGRAPHIC CELL (VOLUME=       3356.28205675)
+ CRYSTALLOGRAPHIC CELL (VOLUME=       3356.27571174)
+
+To get the only tails or average volume: 
+
+(BUSTER)rayar@skirit:~/qm/MgMOF74$ for i in $li ; do echo -n $i; cat $i/$i.out | grep "CRYSTALLOGRAPHIC CELL (VOLUME" | tail -1 ; done
+MgMOF740.950 CRYSTALLOGRAPHIC CELL (VOLUME=       3351.66947730)
+MgMOF740.960 CRYSTALLOGRAPHIC CELL (VOLUME=       3460.35914909)
+MgMOF740.970 CRYSTALLOGRAPHIC CELL (VOLUME=       3570.96919473)
+MgMOF740.980 CRYSTALLOGRAPHIC CELL (VOLUME=       3684.03000483)
+MgMOF740.990 CRYSTALLOGRAPHIC CELL (VOLUME=       3798.79515127)
+MgMOF741.000 CRYSTALLOGRAPHIC CELL (VOLUME=       3915.30151905)
+MgMOF741.010 CRYSTALLOGRAPHIC CELL (VOLUME=       4033.81337621)
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%to create fre-directory in the required folder.%%%%%%%%%%%%%%%%%%%
+
+(BUSTER)rayar@skirit:~/qm/MgMOF74/MgMOF741.010$ ../../vev_crystal.sh MgMOF741.010 fre   #to create fre-directory in the required folder.
+#once the fre folder is created it coantains the .pbs file the we can submit the .pbs file. here ../ means the path of the vev_ file.
+#if the .out file has error in the result, then remove GUESSP command in .d12 file from the freq folder.
+==================================================================================================="
+====================from the frequency folder to obtain volume and frequescy values:===============
+
+(BUSTER)rayar@skirit:~/qm/MgMOF74/MgMOF741.000/MgMOF741.000fre$ cat MgMOF741.000fre.out | grep VOL
+(BUSTER)rayar@skirit:~/qm/MgMOF74/MgMOF741.000/MgMOF741.000fre$ cat MgMOF741.000fre.out | grep FREQ
+
+                    **********to merge all VOL and FREQ in one file*************
+(BUSTER)rayar@skirit:~/qm/MgMOF74/VOL-FREQ$ pr -mts MgMOF740.980fre_Vol-Freq.csv MgMOF740.990fre_Vol-Freq.csv 
+MgMOF741.000fre_Vol-Feq.csv MgMOF741.010fre_Vol-Freq.csv MgMOF741.020fre_Vol-Freq.csv
+|awk '{printf "%1.8f %1.8f %1.8f %1.8f %1.8f\n",$1,$2,$3,$4,$5}' > MgMOF74_VOL-FREQ2.txt           
+
+#above three lines are one command.
+this command is useful to merge multiple csv files in one file 
+
+#to cahnge the frequency from cm^-1 to Hz
+$awk '{print $1*29979245800,$2*29979245800,$3*29979245800,$4*29979245800,$5*29979245800}' MgMOF74_VOL-FREQ.txt 
+
+
+$awk '{print $1*300000/(2*3.14159265359),$2*300000/(2*3.14159265359),$3*300000/(2*3.14159265359),$4*300000/(2*3.14159265359),$5*300000/(2*3.14159265359)}' MgMOF74_VOL-FREQ.txt # values are not correct.
+
+**************************** Error In FREQ values ***************************************
+FREQ(CM**-1) -31.57 -31.57 -26.63 -26.63 -26.63 -25.22 these are imaginory values 
+in this case we need to edit the .d12 file 
+
+sometimes it helps to reoptimize the geometry so that it gets closer to its true minimum structure
+
+since all calculations are done numerically, you always take a structure as converged when it fulfils the convergence criteria (usually expressed in terms of residual forces acting on atoms, force = gradient of energy)
+
+when the potential energy around the minimum is rather flat, the convergence can be reached but the geometry might still be distinct from the true minimum-energy structure
+
+as long as you are not sufficiently close to the minimum, you get imaginary frequencies for that structure
+
+in those cases, reoptimizing to a tighter convergence can help
+
+try to reoptimize all the 5 volumes for zif8 (0.98-1.02) changing the TOLDEG to 0.000001 and the upper MAXCYCLE to 10000
+
+
+========================================END==================================================
+
+
+
+#QM Calculations                           
+E-V Curves                                
+list of Freq + volume values 
+(0.98-1.02)
+
+1) primary run .pbs and .d12 files
+.d12 file edit using 2. Basis sets:pob-dzvp-rev2 from Daniel Vilela Oliveira_article_SI atoms list. 
+2) create folders 0.98 t0 1.80 for E-V values and run .pbs
+3) create frequency folders 
+                                
+#Classical mechanics
+>> equilibrations         1st part of instructions
+>> projection trajectries  2nd part of instructions
+	energy, temp, Density and pressure plots.
+
+1) Unit cell preparation and .gjf and .xyz files 
+2) create supercell  .gjf and .xyg
+3) run fftools we need .ff and MOF_fftools.pbs file 
+4) check witht he dihedrals atoms list 
+5) edit .lmp file 
+6) run for CM jobs. # .pbs file.
+
+
+
+#AWK cmds
+sort command is optimized to handle huge files. and remove the repeated numbers in a column. 
+$sort -u -t' ' -k3,3 file
+-u - print only the unique lines.
+-t - specify the delimiter. Here in this example, I just use the space as delimiter.
+-k3,3 - sort on 3rd field.
+
+$ls -d */      #to select only folders from all files in the directory
+
+cat zif8.out | grep -v [a-z] | awk 'BEGIN{e_tot=0;n=0} NF==18{e_tot+=$3;n++} END{E_tot=e_tot/n; print "ave_tot_energy",E_tot,"Kcal/box"}'
+
+
+              %%%%%*****HELMOLTZ ENERGY Equation****%%%%%%%%%
+$li='seq 0 600 5'
+echo $li
+cat MgM_V-F_Hz.out | awk 'NR>2{i1=i1+$1; i2=i2+$2; i3=i3+$3; i4=i4+$4; i5=i5+$5} END{print 0.5*(6.62607004E-34 * i1), 0.5*(6.62607004E-34 * i2), 0.5*(6.62607004E-34 * i3)* 6.023E23, 0.5*(6.62607004E-34 * i4)* 6.023E23, 0.5*(6.62607004E-34 * i5) * 6.023E23}'
+
+(BUSTER)rayar@skirit:~/qm/MgMOF74/VOL-FREQ$ 
+cat MgM_V-F_Hz.out | awk 'NR>2{for (x=1; x<=5; x++) {i[x]=i[x]+$x;}} END{for (x=1; x<=5; x++) {printf "%1.4f ",(0.5*(6.62607004E-34 * i[x]) * 6.023E23)} print ""}' #zero point energy
+
+cat MgM_V-F_Hz.out | awk 'NR>2{for (x=1; x<=5; x++) {i[x]=i[x]+$x; for (t=0; t<=600; t=t+5) {}}} END{for (x=1; x<=5; x++){printf "%1.4f ",(0.5*(6.62607004E-34 * i[x]) * 6.023E23)} print ""}'
+
+cat MgM_V-F_Hz.out | awk 'BEGIN{t=300; h=6.62607015E-34; kb=1.380649E-23; Na=6.02214076E23;} NR>2{for (x=1; x<=5; x++) {i[x]=i[x]+$x; j[x]=j[x]+ln(1-exp(-(h * $x)/(kb*t))) }} END{for (x=1; x<=5; x++){zpe[x]=i[x] * h * 0.5; Aph[x]=zpe[x] + j[x] * kb * t; printf "%1.4f %1.4f %1.4f ", t,zpe[x],Aph[x]}} print ""}'
+
+(BUSTER)rayar@skirit:~/qm/MgMOF74/VOL-FREQ$ 
+cat MgM_V-F_Hz.out | awk 'BEGIN{t=300; h=6.62607015E-34; kb=1.380649E-23; Na=6.02214076E23;} 
+NR>2&&NF>0{for (x=1; x<=5; x++) {i[x]=i[x]+$x; j[x]=j[x]+log(1-exp(-(h * $x)/(kb*t))) }} 
+END{for (x=1; x<=5; x++){zpe[x]=i[x] * Na * h * 0.5; Aph[x]=zpe[x] + j[x] * Na * kb * t; 
+printf "%1.4f %1.4f %1.4f ", t,zpe[x],Aph[x]} print ""}'
+
+(BUSTER)rayar@skirit:~/qm/MgMOF74/VOL-FREQ$ 
+cat MgM_V-F_Hz.out | awk 'BEGIN{for (t=0; t<=600; t++) {s[t]=s[t]+5;} h=6.62607015E-34; kb=1.380649E-23; Na=6.02214076E23;} 
+NR>2&&NF>0{for (x=1; x<=5; x++) {i[x]=i[x]+$x; j[x]=j[x]+log(1-exp(-(h * $x)/(kb*s[t]))) }} 
+END{for (x=1; x<=5; x++){zpe[x]=i[x] * Na * h * 0.5; Aph[x]=zpe[x] + j[x] * Na * kb * s[t]; 
+printf "%1.4f %1.4f %1.4f ", t,Aph[x]} print ""}'
+
+(BUSTER)rayar@skirit:~/qm/MgMOF74/VOL-FREQ$ 
+cat MgM_V-F_Hz.out | awk 'BEGIN{h=6.62607015E-34; kb=1.380649E-23; Na=6.02214076E23;} 
+NR>2&&NF>0{for (y=1; y<=100; y++) { t=(y-1)*5; for (x=1; x<=5; x++) {i[x]=i[x]+$x; j[x][y]=j[x][y]+log(1-exp(-(h * $x)/(kb*t))) }}} 
+END{for (y=1; y<=100; y++) { t=(y-1)*5; for (x=1; x<=5; x++){zpe[x]=i[x] * Na * h * 0.5; Aph[x][y]=zpe[x] + j[x][y] * Na * kb * t;} 
+printf "%1.4f %1.4f %1.4f %1.4f %1.4f %1.4f \n", t,Aph[1][y],Aph[2][y],Aph[3][y],Aph[4][y],Aph[5][y]}}'
+
+new and working code for helmoltz equation.
+(BUSTER)rayar@skirit:~/qm/MgMOF74/VOL-FREQ$ cat MgM_V-F_Hz.out | awk 'BEGIN{h=6.62607015E-34; kb=1.380649E-23; Na=6.02214076E23;} 
+NR>2&&NF>0{for (y=1; y<=100; y++) { t=(y)*5; for (x=1; x<=5; x++) {i[x]=i[x]+$x; j[x][y]=j[x][y]+log(1-(exp(-(h * $x)/(kb*t)/10))^10)}}} 
+END{for (y=1; y<=100; y++) { t=(y)*5; for (x=1; x<=5; x++){zpe[x]=i[x] * Na * h * 0.5; if (y==1&&x==5) 
+{printf "%1.4f %1.4f %1.4f %1.4f %1.4f %1.4f \n", 0,zpe[1],zpe[2],zpe[3],zpe[4],zpe[5];} Aph[x][y]=zpe[x] + j[x][y] * Na * kb * t;} 
+printf "%1.4f %1.4f %1.4f %1.4f %1.4f %1.4f \n", t,Aph[1][y],Aph[2][y],Aph[3][y],Aph[4][y],Aph[5][y]}}'
+
+
+
+cat file.xyz | awk 'NR>2 {print ($2 + 6.6085)*11, $3, $4}  
