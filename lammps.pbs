@@ -1,0 +1,13 @@
+#!/bin/bash
+#PBS -S /bin/bash
+#PBS -M cervinkc@vscht.cz
+#PBS -m a
+#PBS -l select=1:ncpus=16:mpiprocs=16:ompthreads=1:mem=16gb:scratch_local=10gb:cl_kirke=False
+#PBS -l walltime=96:00:00
+module add lammps-nov2015
+trap 'cp ${SCRATCHDIR}/log.lammps ${cesta}/${uloha}.log && clean_scratch' TERM EXIT
+export cesta=/storage/brno2/home/cervinkc/dispersions/opls_ff/naproxen/naproxen_250
+export uloha=naproxen_250_r1
+echo ${SCRATCHDIR}
+cd ${SCRATCHDIR}
+mpirun -np 16 lammps < ${cesta}/in_${uloha}.lmp > ${cesta}/${uloha}.out
